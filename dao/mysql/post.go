@@ -4,7 +4,7 @@ import (
 	"blog/models"
 	"database/sql"
 	"errors"
-	"github.com/jmoix/sqlx"
+	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -81,6 +81,7 @@ func GetPostListByIDs(ids []string) (postList []*models.ApiPostDetail, err error
 	return
 }
 
+// 获取帖子列表
 func GetPostList(page, size int64) (posts []*models.Post, err error) {
 	sqlStr := `select post_id, title, content, author_id, community_id, create_time
 	from post
@@ -91,5 +92,33 @@ func GetPostList(page, size int64) (posts []*models.Post, err error) {
 
 	posts = make([]*models.Post, 0, 2)
 	err = db.Select(&posts, sqlStr, (page-1)*size, size)
+	return
+}
+
+// 返回包含关键词的帖子列表
+func GetPostListByKeyWords(p *models.ParamPostList) (posts []*models.Post, err error) {
+	sqlStr := `select post_id, title, content, author_id, community_id, create_time
+	from post
+	where title like ?
+	or content like ?
+	ORDER BY create_time
+	DESC
+	limit ?,?
+	`
+	p.Search = "%" + p.Search + "%"
+	posts = make([]*models.Post, 0, 2)
+	err = db.Select(&posts, sqlStr, p.Search, p.Search, (p.Page-1)*p.Size, p.Size)
+	return
+}
+
+// 含有关键词的帖子总数
+func GetPostListTotoalCount(p *models.ParamPostList) (count int64, err error) {
+	sqlStr := `select count(post_id)
+	from post
+	where title like ?
+	or content like ?
+	`
+	p.Search = "%" + p.Search + "%"
+	err = db.Get(&count, sqlStr, p.Search, p.Search)
 	return
 }
